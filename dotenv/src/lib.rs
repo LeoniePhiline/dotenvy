@@ -73,6 +73,22 @@ pub fn from_path<P: AsRef<Path>>(path: P) -> Result<()> {
     iter.load()
 }
 
+/// Loads environment variables from the specified path,
+/// overriding existing environment variables.
+///
+/// # Examples
+///
+/// ```no_run
+/// use dirs::home_dir;
+///
+/// let my_path = home_dir().map(|a| a.join("/absolute/path/.env")).unwrap();
+/// dotenvy::from_path_override(my_path.as_path());
+/// ```
+pub fn from_path_override<P: AsRef<Path>>(path: P) -> Result<()> {
+    let iter = Iter::new(File::open(path).map_err(Error::Io)?);
+    iter.force_load()
+}
+
 ///  Returns an iterator over environment variables from the specified path.
 ///
 /// # Examples
@@ -106,6 +122,25 @@ pub fn from_path_iter<P: AsRef<Path>>(path: P) -> Result<Iter<File>> {
 pub fn from_filename<P: AsRef<Path>>(filename: P) -> Result<PathBuf> {
     let (path, iter) = Finder::new().filename(filename.as_ref()).find()?;
     iter.load()?;
+    Ok(path)
+}
+
+/// Loads environment variables from the specified file,
+/// overriding existing environment variables.
+///
+/// # Examples
+/// ```no_run
+/// dotenvy::from_filename_override("custom.env").unwrap();
+/// ```
+///
+/// It is also possible to load from a typical *.env* file like so. However, using [dotenv_override] is preferred.
+///
+/// ```
+/// dotenvy::from_filename_override(".env").unwrap();
+/// ```
+pub fn from_filename_override<P: AsRef<Path>>(filename: P) -> Result<PathBuf> {
+    let (path, iter) = Finder::new().filename(filename.as_ref()).find()?;
+    iter.force_load()?;
     Ok(path)
 }
 
@@ -145,6 +180,28 @@ pub fn from_read<R: io::Read>(reader: R) -> Result<()> {
     Ok(())
 }
 
+/// Loads environment variables from [io::Read](std::io::Read),
+/// overriding existing environment variables.
+///
+/// This is useful for loading environment variables from from IPC or the network.
+///
+/// For regular files, use [from_path_override] or [from_filename_override].
+///
+/// # Examples
+/// ```no_run
+/// # #![cfg(unix)]
+/// use std::io::Read;
+/// use std::os::unix::net::UnixStream;
+///
+/// let mut stream = UnixStream::connect("/some/socket").unwrap();
+/// dotenvy::from_read_override(stream).unwrap();
+/// ```
+pub fn from_read_override<R: io::Read>(reader: R) -> Result<()> {
+    let iter = Iter::new(reader);
+    iter.force_load()?;
+    Ok(())
+}
+
 /// Returns an iterator over environment variables from [io::Read](std::io::Read).
 ///
 /// # Examples
@@ -164,6 +221,7 @@ pub fn from_read<R: io::Read>(reader: R) -> Result<()> {
 pub fn from_read_iter<R: io::Read>(reader: R) -> Iter<R> {
     Iter::new(reader)
 }
+
 /// Loads the *.env* file from the current directory or parents. This is typically what you want.
 ///
 /// An error will be returned if the file is not found.
@@ -174,6 +232,20 @@ pub fn from_read_iter<R: io::Read>(reader: R) -> Iter<R> {
 pub fn dotenv() -> Result<PathBuf> {
     let (path, iter) = Finder::new().find()?;
     iter.load()?;
+    Ok(path)
+}
+
+/// Loads the *.env* file from the current directory or parents,
+/// overriding existing environment variables.
+///
+/// An error will be returned if the file is not found.
+/// # Examples
+/// ```
+/// dotenvy::dotenv_override().unwrap();
+/// ```
+pub fn dotenv_override() -> Result<PathBuf> {
+    let (path, iter) = Finder::new().find()?;
+    iter.force_load()?;
     Ok(path)
 }
 

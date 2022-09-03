@@ -21,13 +21,25 @@ impl<R: Read> Iter<R> {
         }
     }
 
-    /// Loads all variables found in the `reader` into the environment.
+    /// Loads all variables found in the `reader` into the environment,
+    /// which do not yet exist in the environment.
     pub fn load(self) -> Result<()> {
         for item in self {
             let (key, value) = item?;
             if env::var(&key).is_err() {
                 env::set_var(&key, value);
             }
+        }
+
+        Ok(())
+    }
+
+    /// Loads all variables found in the `reader` into the environment,
+    /// overriding any existing environment variables of the same name.
+    pub fn force_load(self) -> Result<()> {
+        for item in self {
+            let (key, value) = item?;
+            env::set_var(&key, value);
         }
 
         Ok(())
